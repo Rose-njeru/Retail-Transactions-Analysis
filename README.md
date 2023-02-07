@@ -2,6 +2,7 @@
 Retail analysis using Real World Fake Data(RWFD) in SQL  and Visuals in Tableau
 
 [Data Source](https://data.world/markbradbourne/rwfd-real-world-fake-data/workspace/file?filename=Retail+Transactions.csv)
+
 The data table contains 75620 rows and 10 columns
 ``` sql
 SELECT *
@@ -15,7 +16,7 @@ Describe retail.`retail transaction`;
 
 ## Data Cleaning
 The data cleaning process involved:
-1. Checking of missing values
+1.Checking of missing values**
 + The rewards_member and rewards_number column had 31697rows of missing values,when a customer doesn't have a reward number then no record of being a member,in cases of having a reward number the customer can either be a member or not.
 
 ``` sql
@@ -32,9 +33,9 @@ discount_amt
 FROM retail.`retail transactions`
 WHERE coupon_flag ='';
 ```
-~Deleting the missing vakues wil alter the analysis therefore the data maintains as it is.
+~Deleting the missing values will alter the analysis therefore treating every row as unique transaction.
 
-2. Checking for Unique values 
+2. Checking for Unique values** 
 + Location_state
 ``` sql
 SELECT 
@@ -122,3 +123,80 @@ SELECT transaction_hour
 FROM retail.`retail transactions`;
 ```
 ## Manipulation of Columns 
+This involves adding more columns to help with analysis and visualization
+
+**Creating a new column time_of_day**
+
++ Group the transaction_hour interms of morning,afternoon,late_afternoon and evening
+
+``` sql
+SELECT transaction_hour,
+CASE 
+WHEN transaction_hour BETWEEN "11:00 AM" AND "11:59 AM" THEN "Morning"
+WHEN transaction_hour BETWEEN "12:00 PM" AND "2:59 PM" THEN "Afternoon"
+WHEN transaction_hour BETWEEN "3:00 PM" AND "6:00 PM" THEN "Late_afternoon"
+ELSE "Evening"
+END AS hours
+FROM retail.`retail transactions`;
+```
++ Alter the table to add the column
+
+``` sql
+ALTER TABLE retail.`retail transactions`
+ADD COLUMN time_of_day VARCHAR(50) ;
+```
++ Update the table
+```sql
+UPDATE retail.`retail transactions`
+SET time_of_day = CASE 
+WHEN transaction_hour BETWEEN "11:00 AM" AND "11:59 AM" THEN "Morning"
+WHEN transaction_hour BETWEEN "12:00 PM" AND "2:59 PM" THEN "Afternoon"
+WHEN transaction_hour BETWEEN "3:00 PM" AND "6:00 PM" THEN "Late_afternoon"
+ELSE "Evening"
+END;
+``` 
++ Confirm the changes
+```
+SELECT time_of_day
+FROM retail.`retail transactions`;
+```
+**Creating a new column paid_amt that is the amount paid by customers offered the discount**
+
+``` sql 
+SELECT 
+(order_amt-discount_amt) AS paid_amt
+FROM retail.`retail transactions`;
+```
++ Alter the table to add the column and due to the decimals in both discount_amt and paid_amt the column type will be float.
+``` sql
+ALTER TABLE retail.`retail transactions`
+ADD COLUMN paid_amt FLOAT;
+```
++ Update the table
+``` sql
+UPDATE retail.`retail transactions`
+SET paid_amt =(order_amt-discount_amt);
+```
++ Confirm the changes 
+ ``` sql
+UPDATE retail.`retail transactions`
+SET paid_amt =(order_amt-discount_amt);
+```
+
+## Analysis
+
+**The Total Amount paid to the store**
+
+``` sql
+SELECT 
+round(sum(paid_amt),2) AS total_order_amt
+FROM retail.`retail transactions`;
+```
+
+**The average amount paid daily**
+``` sql
+SELECT
+round(AVG(paid_amt),2) as average_daily_amount
+FROM retail.`retail transactions`;
+```
+
