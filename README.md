@@ -213,3 +213,26 @@ FROM retail.`retail transactions`;
 ```
 ![image](https://user-images.githubusercontent.com/92436079/217489029-e103c017-587b-4b73-9d3f-85f727b97793.png)
 
+**Sales by States during the period**
+``` sql
+SELECT 
+distinct(location_state) AS state,
+round(sum(paid_amt),2) AS yearly_sales
+FROM retail.`retail transactions`
+GROUP BY state;
+```
+![States Sales](https://user-images.githubusercontent.com/92436079/217491384-8071094c-45b7-4e37-ab59-173399814fd2.png)
+
+**Sales by Cities during the period**
+``` sql
+SELECT
+DISTINCT location_city,
+location_state,
+extract(year from transaction_date) AS year,
+round(sum(paid_amt),2) AS total_sale
+FROM retail.`retail transactions`
+GROUP BY location_city ;
+```
+![Cities Sales](https://user-images.githubusercontent.com/92436079/217501341-38e5f3b8-c1d1-403d-a87b-cf437b8c9528.png)
+
+Atlanta Georgia had the highest number of sales followed by Miami Florida 
