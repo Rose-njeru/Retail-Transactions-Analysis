@@ -236,3 +236,38 @@ GROUP BY location_city ;
 ![Cities Sales](https://user-images.githubusercontent.com/92436079/217501341-38e5f3b8-c1d1-403d-a87b-cf437b8c9528.png)
 
 Atlanta Georgia had the highest number of sales followed by Miami Florida 
+
+**Yearly Sales**
+
+``` sql
+SELECT 
+extract(year from transaction_date) AS year,
+round(sum(paid_amt),2) AS total_sales
+FROM retail.`retail transactions`
+GROUP BY year;
+``` 
+![Sheet 4](https://user-images.githubusercontent.com/92436079/217524865-043572ba-3cbe-4a80-bec0-4e0b74d32b10.png)
++ 2020 contributed 76.77% of the total sales from the transactions made while 2019 contributed only 23.23%
+**Monthly Sales**
+
+``` sql
+SELECT 
+extract(month from transaction_date) AS month,
+round(sum(paid_amt),2) as monthly_sales,
+extract(year from transaction_date) as year
+FROM retail.`retail transactions`
+GROUP BY month;
+```
+![Monthly Sales](https://user-images.githubusercontent.com/92436079/217526501-435bd09d-1b1b-4fd3-84f8-dbcc934fa271.png)
++ October recoreder the highest number of sales for the year 2020 
+
+**Sales by time_of-day**
+``` sql
+SELECT
+time_of_day,
+round(sum(paid_amt),2) AS total_sales
+FROM retail.`retail transactions`
+GROUP BY time_of_day;
+```
+![Sheet 5](https://user-images.githubusercontent.com/92436079/217529187-5ada6510-a263-4cf7-9fc8-85bd427fbe3d.png)
++The Evening recorded most sales,followed by late afternoon
