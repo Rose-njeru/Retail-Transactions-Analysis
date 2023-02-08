@@ -9,10 +9,12 @@ SELECT *
 FROM retail.`retail transaction`;
 ```
 
-
 ``` sql
 Describe retail.`retail transaction`;
 ```
+
+![image](https://user-images.githubusercontent.com/92436079/217490719-f6b9138e-96a3-4eb9-9800-7cdbb14a0ae7.png)
+
 
 ## Data Cleaning
 The data cleaning process involved:
@@ -42,6 +44,9 @@ SELECT
 DISTINCT location_state
 FROM retail.`retail transactions`;
 ``` 
+
+![image](https://user-images.githubusercontent.com/92436079/217489654-f118ee9b-2fa9-4c98-9af2-dcc6f22258d5.png)
+
 ~ the dataset contains 5 unique states
 
 + Location_city
@@ -50,6 +55,9 @@ SELECT
 DISTINCT location_city
 FROM retail.`retail transactions`;
 ```
+
+![image](https://user-images.githubusercontent.com/92436079/217489965-41c9a690-189b-47cc-813a-9f5a243fb423.png)
+
 ~ the dataset contains 84 unique cities
 
 + reward_member
@@ -58,6 +66,9 @@ SELECT
 DISTINCT rewards_member
 FROM retail.`retail transactions`;
 ``` 
+
+![image](https://user-images.githubusercontent.com/92436079/217490505-3693a6d7-82c1-468b-ab7c-3c98b7912e43.png)
+
 ~ A customer can either be a member or not and null recorder in cases of no record of reward_number
 
 3. Transformation of columns
@@ -189,9 +200,10 @@ SET paid_amt =(order_amt-discount_amt);
 
 ``` sql
 SELECT 
-round(sum(paid_amt),2) AS total_order_amt
+round(sum(paid_amt),2) AS total_sales
 FROM retail.`retail transactions`;
 ```
+![image](https://user-images.githubusercontent.com/92436079/217489440-9d348c64-683e-4f19-843b-e23a70f02c76.png)
 
 **The average amount paid daily**
 ``` sql
@@ -199,4 +211,5 @@ SELECT
 round(AVG(paid_amt),2) as average_daily_amount
 FROM retail.`retail transactions`;
 ```
+![image](https://user-images.githubusercontent.com/92436079/217489029-e103c017-587b-4b73-9d3f-85f727b97793.png)
 
