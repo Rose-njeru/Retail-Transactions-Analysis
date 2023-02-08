@@ -270,4 +270,93 @@ FROM retail.`retail transactions`
 GROUP BY time_of_day;
 ```
 ![Sheet 5](https://user-images.githubusercontent.com/92436079/217529187-5ada6510-a263-4cf7-9fc8-85bd427fbe3d.png)
-+The Evening recorded most sales,followed by late afternoon
+
++ The Evening recorded most sales,followed by late afternoon
+
+## Time Series Decomposition
++ A time series decomposition is a process of breaking down a time series into its constituent parts such as trend, seasonality, and residuals. The decomposition can be performed using various statistical models, but one of the most common approaches is to use the STL (Seasonal and Trend decomposition using Loess) method.
+
+**Trend**
+``` sql
+WITH raw_data AS(
+SELECT 
+extract(month FROM transaction_date) AS month, 
+round(SUM(paid_amt),2) AS total_amount
+FROM retail.`retail transactions`
+GROUP BY month
+  ),
+trend_data AS(
+SELECT month,
+AVG(total_amount) AS avg_total_amount, 
+ROW_NUMBER() OVER (ORDER BY month) AS rn
+FROM raw_data
+GROUP BY month
+),
+trend_fit AS (
+SELECT 
+month,
+avg_total_amount,
+rn, 
+(rn - 1) * AVG(avg_total_amount) OVER () AS y_intercept,
+(rn - 1) * AVG(avg_total_amount) OVER () / (rn - 1) AS slope
+FROM trend_data)
+SELECT
+month, 
+avg_total_amount, 
+round(slope * rn + y_intercept,2) AS trend
+FROM trend_fit
+```
+
+![image](https://user-images.githubusercontent.com/92436079/217534454-6a2784b3-2543-4ece-8119-0745b651b92c.png)
+
+**Seasonality**
+``` sql
+WITH raw_data AS(
+SELECT 
+extract(month FROM transaction_date) AS month, 
+round(SUM(paid_amt),2) AS total_amount
+FROM retail.`retail transactions`
+GROUP BY month
+  ),
+trend_data AS(
+SELECT month,
+AVG(total_amount) AS avg_total_amount, 
+ROW_NUMBER() OVER (ORDER BY month) AS rn
+FROM raw_data
+GROUP BY month
+),
+trend_fit AS (
+SELECT 
+month,
+avg_total_amount,
+rn, 
+(rn - 1) * AVG(avg_total_amount) OVER () AS y_intercept,
+(rn - 1) * AVG(avg_total_amount) OVER () / (rn - 1) AS slope
+FROM trend_data),
+trend_fit_with_y AS(
+SELECT
+month, 
+avg_total_amount, 
+round(slope * rn + y_intercept,2) AS trend
+FROM trend_fit),
+
+seasonality_data AS(
+SELECT
+month, 
+AVG(total_amount) OVER (ORDER BY extract(month from month)) AS avg_monthly_amount,
+total_amount - AVG(total_amount) OVER (ORDER BY extract(month from month)) AS deviation
+FROM raw_data
+GROUP BY month),
+seasonal_index_data AS(
+SELECT 
+extract(month from month) as month_part,
+AVG(deviation) OVER (PARTITION BY extract(month from month)) AS seasonal_index
+FROM seasonality_data)
+SELECT
+month,
+deviation / seasonal_index AS seasonal_fit
+FROM seasonality_data, seasonal_index_data
+GROUP BY month
+```
+
+![image](https://user-images.githubusercontent.com/92436079/217536997-5d340f56-ca3e-4ac6-a12f-d34417a08e20.png)
