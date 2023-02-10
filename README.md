@@ -233,7 +233,8 @@ round(sum(paid_amt),2) AS total_sale
 FROM retail.`retail transactions`
 GROUP BY location_city ;
 ```
-![Cities Sales](https://user-images.githubusercontent.com/92436079/217501341-38e5f3b8-c1d1-403d-a87b-cf437b8c9528.png)
+![Cities Sales (1)](https://user-images.githubusercontent.com/92436079/218033365-0418b399-dcd5-4c2b-ab27-fbb2a89c234c.png)
+
 
 Atlanta Georgia had the highest number of sales followed by Miami Florida 
 
