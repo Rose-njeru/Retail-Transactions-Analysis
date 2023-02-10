@@ -278,6 +278,7 @@ GROUP BY time_of_day;
 + A time series decomposition is a process of breaking down a time series into its constituent parts such as trend, seasonality, and residuals. The decomposition can be performed using various statistical models, but one of the most common approaches is to use the STL (Seasonal and Trend decomposition using Loess) method.
 
 **Trend**
++ Calculating the average total amount for each month, and then using a linear regression to estimate the trend.
 ``` sql
 WITH raw_data AS(
 SELECT 
@@ -310,7 +311,16 @@ FROM trend_fit
 
 ![image](https://user-images.githubusercontent.com/92436079/217534454-6a2784b3-2543-4ece-8119-0745b651b92c.png)
 
++ The first CTE raw_data groups the data by month and calculates the total amount spent in each month.
+
++ The second CTE trend_data calculates the average total amount spent for each month and assigns a row number to each month based on the order of the months.
+
++ The third CTE trend_fit calculates the slope and y-intercept of the line of best fit for the average total amount spent for each month.
+
++ The fourth CTE trend_fit_with_y calculates the trend component of the time series data.
+
 **Seasonality**
++ Calculating the deviation of each month's total amount from the average monthly amount, and then dividing the deviation by the seasonal index to get the seasonal fit.
 ``` sql
 WITH raw_data AS(
 SELECT 
@@ -361,3 +371,9 @@ GROUP BY month
 ```
 
 ![image](https://user-images.githubusercontent.com/92436079/217536997-5d340f56-ca3e-4ac6-a12f-d34417a08e20.png)
+
++ CTE seasonality_data calculates the deviation of each month's total amount spent from the average monthly amount spent.
+
++ CTE seasonal_index_data calculates the seasonal index, which represents the deviation of each month's average amount spent from the overall average amount spent.
+
++ CTE seasonality_fit calculates the seasonal component of the time series data.
