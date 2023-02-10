@@ -282,31 +282,35 @@ GROUP BY time_of_day;
 ``` sql
 WITH raw_data AS(
 SELECT 
-extract(month FROM transaction_date) AS month, 
+extract(month FROM transaction_date) AS month,
 round(SUM(paid_amt),2) AS total_amount
 FROM retail.`retail transactions`
 GROUP BY month
   ),
 trend_data AS(
-SELECT month,
+SELECT
+rd.month,
 AVG(total_amount) AS avg_total_amount, 
 ROW_NUMBER() OVER (ORDER BY month) AS rn
-FROM raw_data
+FROM raw_data AS rd
 GROUP BY month
 ),
 trend_fit AS (
-SELECT 
-month,
-avg_total_amount,
-rn, 
+SELECT
+td.month,
+td.avg_total_amount,
+td.rn, 
 (rn - 1) * AVG(avg_total_amount) OVER () AS y_intercept,
 (rn - 1) * AVG(avg_total_amount) OVER () / (rn - 1) AS slope
-FROM trend_data)
+FROM trend_data AS td
+GROUP BY month )
 SELECT
-month, 
-avg_total_amount, 
-round(slope * rn + y_intercept,2) AS trend
-FROM trend_fit
+tf.month,
+tf.avg_total_amount, 
+round(tf.slope * tf.rn + y_intercept,2) AS trend
+FROM trend_fit AS tf 
+GROUP BY month
+
 ```
 
 ![image](https://user-images.githubusercontent.com/92436079/217534454-6a2784b3-2543-4ece-8119-0745b651b92c.png)
@@ -315,7 +319,7 @@ FROM trend_fit
 
 + The second CTE trend_data calculates the average total amount spent for each month and assigns a row number to each month based on the order of the months.
 
-+ The third CTE trend_fit calculates the slope and y-intercept of the line of best fit for the average total amount spent for each month.
++ The third CTE trend_fit calculates the slope and y-intercept of the line of best fit(linear regression) for the average total amount spent for each month.
 
 + The fourth CTE trend_fit_with_y calculates the trend component of the time series data.
 
@@ -324,50 +328,57 @@ FROM trend_fit
 ``` sql
 WITH raw_data AS(
 SELECT 
-extract(month FROM transaction_date) AS month, 
+extract(month FROM transaction_date) AS month,
 round(SUM(paid_amt),2) AS total_amount
 FROM retail.`retail transactions`
 GROUP BY month
   ),
 trend_data AS(
-SELECT month,
+SELECT
+rd.month,
 AVG(total_amount) AS avg_total_amount, 
 ROW_NUMBER() OVER (ORDER BY month) AS rn
-FROM raw_data
+FROM raw_data AS rd
 GROUP BY month
 ),
 trend_fit AS (
-SELECT 
-month,
-avg_total_amount,
-rn, 
+SELECT
+td.month,
+td.avg_total_amount,
+td.rn, 
 (rn - 1) * AVG(avg_total_amount) OVER () AS y_intercept,
 (rn - 1) * AVG(avg_total_amount) OVER () / (rn - 1) AS slope
-FROM trend_data),
+FROM trend_data AS td
+GROUP BY month ),
 trend_fit_with_y AS(
 SELECT
-month, 
-avg_total_amount, 
-round(slope * rn + y_intercept,2) AS trend
-FROM trend_fit),
+tf.month,
+tf.avg_total_amount, 
+round(tf.slope * tf.rn + y_intercept,2) AS trend
+FROM trend_fit AS tf 
+GROUP BY month
+),
 
 seasonality_data AS(
 SELECT
-month, 
+month(rd.month) AS month,
 AVG(total_amount) OVER (ORDER BY extract(month from month)) AS avg_monthly_amount,
 total_amount - AVG(total_amount) OVER (ORDER BY extract(month from month)) AS deviation
-FROM raw_data
+FROM raw_data AS rd
 GROUP BY month),
 seasonal_index_data AS(
 SELECT 
-extract(month from month) as month_part,
+extract(month from sd.month) as month_part,
 AVG(deviation) OVER (PARTITION BY extract(month from month)) AS seasonal_index
-FROM seasonality_data)
+FROM seasonality_data AS sd
+GROUP BY month_part
+)
 SELECT
-month,
+month_part,
 deviation / seasonal_index AS seasonal_fit
-FROM seasonality_data, seasonal_index_data
+FROM seasonality_data AS sd, seasonal_index_data AS sid
 GROUP BY month
+
 ```
 
 ![image](https://user-images.githubusercontent.com/92436079/217536997-5d340f56-ca3e-4ac6-a12f-d34417a08e20.png)
@@ -377,3 +388,75 @@ GROUP BY month
 + CTE seasonal_index_data calculates the seasonal index, which represents the deviation of each month's average amount spent from the overall average amount spent.
 
 + CTE seasonality_fit calculates the seasonal component of the time series data.
+
+**Residuals**
+``` sql
+WITH raw_data AS(
+SELECT 
+extract(month FROM transaction_date) AS month,
+round(SUM(paid_amt),2) AS total_amount
+FROM retail.`retail transactions`
+GROUP BY month
+  ),
+trend_data AS(
+SELECT
+rd.month,
+AVG(total_amount) AS avg_total_amount, 
+ROW_NUMBER() OVER (ORDER BY month) AS rn
+FROM raw_data AS rd
+GROUP BY month
+),
+trend_fit AS (
+SELECT
+td.month,
+td.avg_total_amount,
+td.rn, 
+(rn - 1) * AVG(avg_total_amount) OVER () AS y_intercept,
+(rn - 1) * AVG(avg_total_amount) OVER () / (rn - 1) AS slope
+FROM trend_data AS td
+GROUP BY month ),
+trend_fit_with_y AS(
+SELECT
+tf.month,
+tf.avg_total_amount, 
+round(tf.slope * tf.rn + y_intercept,2) AS trend
+FROM trend_fit AS tf 
+GROUP BY month
+),
+
+seasonality_data AS(
+SELECT
+month(rd.month) AS month,
+AVG(total_amount) OVER (ORDER BY extract(month from month)) AS avg_monthly_amount,
+total_amount - AVG(total_amount) OVER (ORDER BY extract(month from month)) AS deviation
+FROM raw_data AS rd
+GROUP BY month),
+seasonal_index_data AS(
+SELECT 
+extract(month from sd.month) as month_part,
+AVG(deviation) OVER (PARTITION BY extract(month from month)) AS seasonal_index
+FROM seasonality_data AS sd
+GROUP BY month_part
+),
+seasonality_fit AS(
+SELECT
+month_part,
+deviation / seasonal_index AS seasonal_fit
+FROM seasonality_data AS sd, seasonal_index_data AS sid
+GROUP BY month_part),
+decomposed_data AS(
+SELECT
+rd.month,
+rd.total_amount,
+tfy.trend,
+sf.seasonal_fit,
+rd.total_amount - tfy.trend - sf.seasonal_fit AS residual
+FROM raw_data rd, trend_fit_with_y  as tfy,seasonality_fit sf)
+SELECT *
+FROM decomposed_data
+ORDER BY month;
+```
+
+![image](https://user-images.githubusercontent.com/92436079/218108866-0bd509d0-973a-48a8-8773-f917ccee4a19.png)
+
++ The "decomposed_data" CTE combines the trend, seasonality, and residual information for each month by subtracting the trend and seasonal fit from the total amount in each month.
